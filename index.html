@@ -1,59 +1,190 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GeoGebra 嵌入</title>
-
-<!-- GeoGebra 官方 JS 库 -->
-<script src="https://www.geogebra.org/apps/deployggb.js"></script>
-
-<style>
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: #fff; }
-  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
-
-  /* ===== 核心：解决手机端底部留空 =====
-       不再写死 height，让高度随宽度等比缩放，手机端上下零留空 */
-  .ggb-wrap {
-    width: 100%;
-    aspect-ratio: 4 / 3;   /* 宽高比锁定，自适应永不留空 */
-    max-height: 85vh;      /* 防止横屏 / 桌面过高 */
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    overflow: hidden;
-    background: #fafafa;
-  }
-  /* GeoGebra 注入的容器填满 .ggb-wrap */
-  .ggb-wrap > div,
-  .ggb-wrap iframe { width: 100% !important; height: 100% !important; border: 0; display: block; }
-  /* 旧浏览器兜底（不支持 aspect-ratio 时） */
-  @supports not (aspect-ratio: 4 / 3) {
-    .ggb-wrap { height: 75vw; max-height: 560px; }
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoGebra 离线应用</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;          /* 桌面端居中，保持不变 */
+            min-height: 100vh;
+            min-height: 100dvh;          /* ★ 修复：用动态视口单位，规避移动端地址栏导致的 100vh 偏差 */
+            background-color: #f0f2f5;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .container {
+            width: 100%;
+            max-width: 820px;
+            padding: 16px;
+        }
+        #applet_container {
+            width: 100%;
+            aspect-ratio: 16 / 9;          /* 使用宽高比 16:9，自适应宽度 */
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            position: relative;
+        }
+        /* 加载提示 */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            color: #888;
+            font-size: 15px;
+        }
+        .loading::after {
+            content: "…";
+            animation: dots 1.2s steps(4, end) infinite;
+        }
+        @keyframes dots {
+            0% { content: ""; }
+            25% { content: "."; }
+            50% { content: ".."; }
+            75% { content: "..."; }
+            100% { content: ""; }
+        }
+        /* ================= 移动端适配 ================= */
+        /* ★ 修复说明：
+           手机上"上下留空"的根源是：
+           1) body 用 min-height:100vh + align-items:center，把较矮的画布垂直居中 → 上下各一片空白；
+           2) 100vh 在 iOS/Android 会被地址栏影响，常多出底部空白。
+           因此移动端改为：让容器铺满整个视口高度，画布 flex:1 填满，不再居中。
+        */
+        @media (max-width: 640px) {
+            body {
+                align-items: flex-start;    /* ★ 不再垂直居中，消除"上空" */
+                min-height: 100dvh;
+            }
+            .container {
+                padding: 8px;
+                height: 100dvh;             /* ★ 容器占满视口高度 */
+                display: flex;
+                flex-direction: column;
+            }
+            #applet_container {
+                aspect-ratio: auto;         /* ★ 取消固定宽高比，改由高度撑开 */
+                flex: 1;                    /* ★ 画布拉满剩余高度，消除"下空" */
+                min-height: 0;              /* 允许在 flex 中正确收缩 */
+                border-radius: 8px;
+            }
+        }
+        @media (max-width: 420px) {
+            /* 极小屏沿用铺满逻辑，仅调整圆角/边距，不再强制竖屏比例 */
+            .container { padding: 6px; }
+            #applet_container { border-radius: 6px; }
+        }
+    </style>
 </head>
 <body>
 
-<!-- GeoGebra 挂载点 -->
-<div class="ggb-wrap"><div id="ggb-app"></div></div>
+    <div class="container">
+        <!-- GeoGebra 容器 -->
+        <div id="applet_container">
+            <div class="loading">加载中</div>
+        </div>
+    </div>
 
-<script>
-  // 读取地址栏 ?file= 参数（博客 iframe 传过来的 ggb 地址）
-  var ggbUrl = new URLSearchParams(location.search).get('file');
+    <!-- ========== 核心加载脚本（未做任何改动） ========== -->
+    <script src="GeoGebra/deployggb.js"></script>
 
-  if (ggbUrl) {
-    var applet = new GGBApplet({
-      "filename": ggbUrl,           // ← ggb 文件地址（在你自己的服务器上）
-      "showToolBar": true,
-      "showAlgebraInput": true,
-      "showMenuBar": true
-    }, '5.0', 'ggb-app');
-    applet.inject('ggb-app');
-  } else {
-    document.getElementById('ggb-app').textContent = '请在地址栏追加 ?file=https://...ggb';
-  }
-</script>
+    <script>
+        (function() {
+            "use strict";
+
+            // ----- 工具函数：获取 URL 参数 -----
+            function getQueryParam(name) {
+                var url = new URL(window.location.href);
+                return url.searchParams.get(name);
+            }
+
+            // ----- 配置区（你可以在这里修改默认值）-----
+            var DEFAULT_FILE_URL = "https://p.jgd.cc.cd/file/1784779273427_1.ggb";
+            var GGB_BASE_PATH = "GeoGebra/HTML5/5.0/web3d/";
+
+            // ----- 从 URL 获取文件名或完整 URL -----
+            var fileParam = getQueryParam('file');
+            var fileUrl = (fileParam && fileParam.trim() !== '') ? fileParam.trim() : DEFAULT_FILE_URL;
+
+            // 防止路径遍历攻击
+            if (!fileUrl.includes('://')) {
+                if (fileUrl.includes('/') || fileUrl.includes('\\')) {
+                    fileUrl = DEFAULT_FILE_URL;
+                    console.warn('不合法的文件名，已使用默认文件');
+                }
+            }
+
+            // ----- 配置 GeoGebra Applet（使用百分比高度，填满容器）-----
+            var params = {
+                "filename": fileUrl,
+                "width": "100%",
+                "height": "100%",                 // 百分比高度，填满容器
+                "appName": "classic",
+                "showToolBar": false,
+                "showMenuBar": false,
+                "showAlgebraInput": false,
+                "showResetIcon": true,
+                "showFullscreenButton": true,     // 显示全屏按钮
+                "showZoomButtons": true,          // 显示缩放按钮
+                "enableLabelDrags": false,
+                "enableShiftDragZoom": true,
+                "enableRightClick": false,
+                "showLogging": false,
+                "showTitleBar": false,
+                "borderColor": "none",
+                "errorHandler": function(msg) {
+                    console.error('GeoGebra 加载错误:', msg);
+                    var container = document.getElementById('applet_container');
+                    if (container) {
+                        container.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100%;color:#c0392b;padding:20px;text-align:center;flex-direction:column;"><span style="font-size:48px;margin-bottom:12px;">⚠️</span><span>加载失败：' + msg + '</span><span style="font-size:13px;color:#888;margin-top:8px;">请检查文件地址是否正确或网络是否可用</span></div>';
+                    }
+                }
+            };
+
+            // ----- 创建并注入 Applet -----
+            var applet = new GGBApplet(params, true);
+            applet.setHTML5Codebase(GGB_BASE_PATH);
+
+            function injectApplet() {
+                var container = document.getElementById('applet_container');
+                if (!container) return;
+                container.innerHTML = '';
+                try {
+                    applet.inject('applet_container');
+                } catch (e) {
+                    console.error('注入 Applet 失败:', e);
+                    container.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100%;color:#c0392b;padding:20px;text-align:center;flex-direction:column;"><span style="font-size:48px;margin-bottom:12px;">❌</span><span>初始化失败，请刷新页面重试</span></div>';
+                }
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', injectApplet);
+            } else {
+                injectApplet();
+            }
+
+            // ----- 窗口自适应 -----
+            var resizeTimer = null;
+            window.addEventListener('resize', function() {
+                if (resizeTimer) clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(function() {
+                    if (applet && typeof applet.resize === 'function') {
+                        applet.resize();
+                    }
+                }, 200);
+            });
+
+        })();
+    </script>
 
 </body>
 </html>
