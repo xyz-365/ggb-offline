@@ -56,8 +56,11 @@
         @media (max-width: 640px) {
             .container { padding: 8px; }
             #applet_container { 
-                aspect-ratio: 1 / 1;        /* 手机上用 4:3 比例 */
-                border-radius: 8px; 
+                width: 100%;
+                height: 70vw;              /* 高度为视口宽度的 70% */
+              max-height: 460px;         /* 限制最大高度，避免过大 */
+              border-radius: 8px; 
+               
             }
         }
         @media (max-width: 420px) {
