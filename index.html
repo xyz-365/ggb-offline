@@ -25,14 +25,14 @@
         }
         #applet_container {
             width: 100%;
-            height: 600px;
+            height: 480px;             /* 从 600px 调整为 480px */
             background-color: #ffffff;
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
             overflow: hidden;
             position: relative;
         }
-        /* 加载提示 */
+        /* 加载提示 - 精简样式 */
         .loading {
             display: flex;
             justify-content: center;
@@ -40,7 +40,6 @@
             height: 100%;
             color: #888;
             font-size: 15px;
-            letter-spacing: 0.5px;
         }
         .loading::after {
             content: "…";
@@ -56,10 +55,11 @@
         /* 移动端适配 */
         @media (max-width: 640px) {
             .container { padding: 8px; }
-            #applet_container { height: 75vw; border-radius: 8px; }
+            #applet_container { height: 60vw; }   /* 从 75vw 调整为 60vw */
+            border-radius: 8px;
         }
         @media (max-width: 420px) {
-            #applet_container { height: 80vw; }
+            #applet_container { height: 65vw; }   /* 从 80vw 调整为 65vw */
         }
     </style>
 </head>
@@ -73,7 +73,7 @@
     </div>
 
     <!-- ========== 核心加载脚本 ========== -->
-    <!-- 1. 引入离线包中的 deployggb.js（请根据你的实际路径调整） -->
+    <!-- 1. 引入离线包中的 deployggb.js -->
     <script src="GeoGebra/deployggb.js"></script>
 
     <script>
@@ -102,22 +102,22 @@
                 }
             }
 
-            // ----- 配置 GeoGebra Applet（隐藏所有标题和标签）-----
+            // ----- 配置 GeoGebra Applet -----
             var params = {
                 "filename": fileUrl,
                 "width": "100%",
-                "height": 600,
+                "height": 480,                    // 与 CSS 中的高度保持一致
                 "appName": "classic",
-                "showToolBar": false,          // 隐藏工具栏
-                "showMenuBar": false,          // 隐藏菜单栏
-                "showAlgebraInput": false,     // 隐藏输入框
-                "showResetIcon": true,         // 保留重置按钮（可选）
+                "showToolBar": false,
+                "showMenuBar": false,
+                "showAlgebraInput": false,
+                "showResetIcon": true,
                 "enableLabelDrags": false,
                 "enableShiftDragZoom": true,
                 "enableRightClick": false,
                 "showLogging": false,
-                // 关键：隐藏左上角的文件名标题
                 "showTitleBar": false,
+                "borderColor": "none",            // 去掉边框，更紧凑
                 "errorHandler": function(msg) {
                     console.error('GeoGebra 加载错误:', msg);
                     var container = document.getElementById('applet_container');
