@@ -52,17 +52,33 @@
             75% { content: "..."; }
             100% { content: ""; }
         }
-        /* 移动端适配 */
+        /* 移动端适配：让画布铺满屏幕，消除上下留空 */
         @media (max-width: 640px) {
-            .container { padding: 8px; }
-            #applet_container { 
-                aspect-ratio: 4 / 3;        /* 手机上用 4:3 比例 */
-                border-radius: 8px; 
+            html, body {
+                height: 100%;
+            }
+            body {
+                align-items: stretch;       /* 取消垂直居中，避免上方留空 */
+                min-height: 100vh;
+                min-height: 100dvh;         /* 动态视口，规避地址栏导致的底部留空 */
+            }
+            .container {
+                padding: 8px;
+                height: 100vh;              /* 容器占满视口高度 */
+                height: 100dvh;
+                display: flex;
+                flex-direction: column;
+            }
+            #applet_container {
+                aspect-ratio: auto;         /* 取消固定比例，由高度撑开 */
+                flex: 1;                    /* 拉满剩余高度 → 消除下方留空 */
+                min-height: 0;
+                border-radius: 8px;
             }
         }
         @media (max-width: 420px) {
-            #applet_container { 
-                aspect-ratio: 3 / 4;        /* 小屏手机用竖屏比例 3:4 */
+            #applet_container {
+                border-radius: 6px;        /* 小屏仅调整圆角，比例仍由屏幕决定 */
             }
         }
     </style>
@@ -170,3 +186,4 @@
 
 </body>
 </html>
+
