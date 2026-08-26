@@ -13,9 +13,8 @@
         body {
             display: flex;
             justify-content: center;
-            align-items: center;          /* 桌面端居中，保持不变 */
+            align-items: center;
             min-height: 100vh;
-            min-height: 100dvh;          /* ★ 修复：用动态视口单位，规避移动端地址栏导致的 100vh 偏差 */
             background-color: #f0f2f5;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
@@ -53,35 +52,18 @@
             75% { content: "..."; }
             100% { content: ""; }
         }
-        /* ================= 移动端适配 ================= */
-        /* ★ 修复说明：
-           手机上"上下留空"的根源是：
-           1) body 用 min-height:100vh + align-items:center，把较矮的画布垂直居中 → 上下各一片空白；
-           2) 100vh 在 iOS/Android 会被地址栏影响，常多出底部空白。
-           因此移动端改为：让容器铺满整个视口高度，画布 flex:1 填满，不再居中。
-        */
+        /* 移动端适配 */
         @media (max-width: 640px) {
-            body {
-                align-items: flex-start;    /* ★ 不再垂直居中，消除"上空" */
-                min-height: 100dvh;
-            }
-            .container {
-                padding: 8px;
-                height: 100dvh;             /* ★ 容器占满视口高度 */
-                display: flex;
-                flex-direction: column;
-            }
-            #applet_container {
-                aspect-ratio: auto;         /* ★ 取消固定宽高比，改由高度撑开 */
-                flex: 1;                    /* ★ 画布拉满剩余高度，消除"下空" */
-                min-height: 0;              /* 允许在 flex 中正确收缩 */
-                border-radius: 8px;
+            .container { padding: 8px; }
+            #applet_container { 
+                aspect-ratio: 4 / 3;        /* 手机上用 4:3 比例 */
+                border-radius: 8px; 
             }
         }
         @media (max-width: 420px) {
-            /* 极小屏沿用铺满逻辑，仅调整圆角/边距，不再强制竖屏比例 */
-            .container { padding: 6px; }
-            #applet_container { border-radius: 6px; }
+            #applet_container { 
+                aspect-ratio: 3 / 4;        /* 小屏手机用竖屏比例 3:4 */
+            }
         }
     </style>
 </head>
@@ -94,7 +76,7 @@
         </div>
     </div>
 
-    <!-- ========== 核心加载脚本（未做任何改动） ========== -->
+    <!-- ========== 核心加载脚本 ========== -->
     <script src="GeoGebra/deployggb.js"></script>
 
     <script>
