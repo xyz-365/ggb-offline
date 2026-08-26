@@ -16,7 +16,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
 
-        /* 桌面端：居中布局 */
+        /* 桌面端：居中 */
         @media (min-width: 641px) {
             body {
                 display: flex;
@@ -24,50 +24,45 @@
                 align-items: center;
                 min-height: 100vh;
             }
-            .container {
-                width: 100%;
-                max-width: 820px;
-                padding: 16px;
-            }
         }
 
-        /* 移动端：正常文档流，不居中、不拉伸 */
-        @media (max-width: 640px) {
-            body {
-                padding-top: env(safe-area-inset-top, 8px);
-                padding-bottom: env(safe-area-inset-bottom, 8px);
-                padding-left: 8px;
-                padding-right: 8px;
-            }
-            .container {
-                width: 100%;
-            }
+        .container {
+            width: 100%;
+            max-width: 820px;
+            padding: 16px;
         }
 
         #applet_container {
             width: 100%;
-            aspect-ratio: 16 / 9;
+            /* 关键：用 padding-bottom hack 代替 aspect-ratio，兼容性更好 */
+            position: relative;
             background-color: #ffffff;
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
             overflow: hidden;
-            position: relative;
         }
 
-        /* GeoGebra iframe 填满容器 */
-        #applet_container iframe {
+        /* 用伪元素撑出 16:9 比例 */
+        #applet_container::before {
+            content: "";
             display: block;
+            padding-top: 56.25%; /* 9/16 = 56.25% → 16:9 */
+        }
+
+        /* 实际内容区域绝对定位覆盖 */
+        #applet_container > * {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100% !important;
             height: 100% !important;
-            border: none;
         }
 
         /* 加载提示 */
         .loading {
-            display: flex;
+            display: flex !important;
             justify-content: center;
             align-items: center;
-            height: 100%;
             color: #888;
             font-size: 15px;
         }
@@ -83,7 +78,117 @@
             100% { content: ""; }
         }
 
-        /* 小屏手机竖屏比例 */
-        @media (max-width: 420px) {
+        /* 移动端 */
+        @media (max-width: 640px) {
+            .container {
+                padding: 8px;
+                padding-top: env(safe-area-inset-top, 8px);
+                padding-bottom: env(safe-area-inset-bottom, 8px);
+            }
             #applet_container {
-                aspect-ratio:
+                border-radius: 8px;
+            }
+        }
+
+        /* 小屏竖屏：改为 4:5 比例 */
+        @media (max-width: 420px) {
+            #applet_container::before {
+                padding-top: 125%; /* 5/4 = 125% → 4:5 */
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="applet_container">
+            <div class="loading">加载中</div>
+        </div>
+    </div>
+
+    <script src="GeoGebra/deployggb.js"></script>
+
+    <script>
+        (function() {
+            "use strict";
+
+            function getQueryParam(name) {
+                var url = new URL(window.location.href);
+                return url.searchParams.get(name);
+            }
+
+            var DEFAULT_FILE_URL = "https://p.jgd.cc.cd/file/1784779273427_1.ggb";
+            var GGB_BASE_PATH = "GeoGebra/HTML5/5.0/web3d/";
+
+            var fileParam = getQueryParam('file');
+            var fileUrl = (fileParam && fileParam.trim() !== '') ? fileParam.trim() : DEFAULT_FILE_URL;
+
+            if (!fileUrl.includes('://')) {
+                if (fileUrl.includes('/') || fileUrl.includes('\\')) {
+                    fileUrl = DEFAULT_FILE_URL;
+                    console.warn('不合法的文件名，已使用默认文件');
+                }
+            }
+
+            var params = {
+                "filename": fileUrl,
+                "width": "100%",
+                "height": "100%",
+                "appName": "classic",
+                "showToolBar": false,
+                "showMenuBar": false,
+                "showAlgebraInput": false,
+                "showResetIcon": true,
+                "showFullscreenButton": true,
+                "showZoomButtons": true,
+                "enableLabelDrags": false,
+                "enableShiftDragZoom": true,
+                "enableRightClick": false,
+                "showLogging": false,
+                "showTitleBar": false,
+                "borderColor": "none",
+                "errorHandler": function(msg) {
+                    console.error('GeoGebra 加载错误:', msg);
+                    var container = document.getElementById('applet_container');
+                    if (container) {
+                        container.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100%;color:#c0392b;padding:20px;text-align:center;flex-direction:column;"><span style="font-size:48px;margin-bottom:12px;">⚠️</span><span>加载失败：' + msg + '</span><span style="font-size:13px;color:#888;margin-top:8px;">请检查文件地址是否正确或网络是否可用</span></div>';
+                    }
+                }
+            };
+
+            var applet = new GGBApplet(params, true);
+            applet.setHTML5Codebase(GGB_BASE_PATH);
+
+            function injectApplet() {
+                var container = document.getElementById('applet_container');
+                if (!container) return;
+                container.innerHTML = '';
+                try {
+                    applet.inject('applet_container');
+                } catch (e) {
+                    console.error('注入 Applet 失败:', e);
+                    container.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100%;color:#c0392b;padding:20px;text-align:center;flex-direction:column;"><span style="font-size:48px;margin-bottom:12px;">❌</span><span>初始化失败，请刷新页面重试</span></div>';
+                }
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', injectApplet);
+            } else {
+                injectApplet();
+            }
+
+            var resizeTimer = null;
+            window.addEventListener('resize', function() {
+                if (resizeTimer) clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(function() {
+                    if (applet && typeof applet.resize === 'function') {
+                        applet.resize();
+                    }
+                }, 200);
+            });
+
+        })();
+    </script>
+
+</body>
+</html>
