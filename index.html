@@ -11,38 +11,61 @@
     background: #f0f2f5;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
   }
-  /* 桌面端居中，移动端正常文档流 */
+
+  /* 桌面端居中 */
   @media (min-width: 641px) {
     body {
       display: flex; justify-content: center; align-items: center;
       min-height: 100vh;
     }
+    .container { width: 100%; max-width: 820px; padding: 16px; }
+    #applet_container { height: 461px; }
   }
-  .container {
-    width: 100%; max-width: 820px; padding: 16px;
-  }
+
+  /* 移动端：纯文档流 */
   @media (max-width: 640px) {
-    .container { padding: 8px; padding-top: env(safe-area-inset-top, 8px); }
+    body {
+      padding: env(safe-area-inset-top, 8px) 8px env(safe-area-inset-bottom, 8px);
+    }
+    .container { width: 100%; }
+    #applet_container { height: 56.25vw; }  /* 16:9 */
   }
-  /* 容器只负责占位高度，不参与 flex 拉伸 */
+
+  /* 小屏竖屏 */
+  @media (max-width: 420px) {
+    #applet_container { height: 125vw; }    /* 4:5 */
+  }
+
+  /* ===== 容器本身 ===== */
   #applet_container {
     width: 100%;
-    height: 56.25vw;          /* 16:9，按宽度算高度，移动端稳定 */
-    max-height: 70vh;
     background: #fff;
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0,0,0,.08);
     overflow: hidden;
+    position: relative;
   }
-  @media (min-width: 641px) {
-    #applet_container { height: 461px; }   /* 820 * 9/16≈461 */
+
+  /* ===== 强制 GGB 所有内部层级填满 ===== */
+  #applet_container > *,
+  #applet_container iframe,
+  #applet_container iframe html,
+  #applet_container iframe body,
+  #applet_container article,
+  #applet_container .applet_scaler,
+  #applet_container .GeoGebraFrame {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    display: block !important;
   }
-  @media (max-width: 420px) {
-    #applet_container { height: 125vw; max-height: 70vh; } /* 4:5 */
+
+  /* GGB 内部 canvas 也要填满 */
+  #applet_container canvas {
+    width: 100% !important;
+    height: 100% !important;
   }
-  #applet_container iframe {
-    display: block; width: 100% !important; height: 100% !important; border: none;
-  }
+
   .loading {
     display: flex; justify-content: center; align-items: center;
     height: 100%; color: #888; font-size: 15px;
@@ -72,7 +95,7 @@
     fileUrl = DEFAULT_FILE_URL;
   }
 
-  // 关键：width/height 用具体像素，不用 "100%"
+  // 用具体像素初始化（关键：不能 100%）
   var params = {
     "filename": fileUrl,
     "width": 800,
@@ -94,18 +117,46 @@
   var applet = new GGBApplet(params, true);
   applet.setHTML5Codebase(GGB_BASE_PATH);
 
-  function fitSize() {
+  function getBoxSize() {
     var box = document.getElementById('applet_container');
-    if (!box || !applet || typeof applet.setSize !== 'function') return;
-    var w = box.clientWidth, h = box.clientHeight;
-    if (w > 0 && h > 0) applet.setSize(w, h);
+    return { w: box.clientWidth, h: box.clientHeight };
+  }
+
+  function fitSize() {
+    var size = getBoxSize();
+    if (size.w > 0 && size.h > 0 && applet && typeof applet.setSize === 'function') {
+      applet.setSize(size.w, size.h);
+    }
+  }
+
+  function forceFill() {
+    // 强制 GGB 内部所有层级高度 100%
+    var box = document.getElementById('applet_container');
+    var iframes = box.querySelectorAll('iframe');
+    for (var i = 0; i < iframes.length; i++) {
+      var doc = iframes[i].contentDocument || iframes[i].contentWindow && iframes[i].contentWindow.document;
+      if (doc) {
+        var style = doc.createElement('style');
+        style.textContent = `
+          html, body { width:100% !important; height:100% !important; margin:0 !important; padding:0 !important; overflow:hidden !important; }
+          article, .applet_scaler, .GeoGebraFrame { width:100% !important; height:100% !important; max-height:100% !important; }
+          canvas { width:100% !important; height:100% !important; }
+        `;
+        doc.head.appendChild(style);
+      }
+    }
   }
 
   function inject() {
     var box = document.getElementById('applet_container');
     box.innerHTML = '';
     applet.inject('applet_container');
-    setTimeout(fitSize, 300);   // 等 iframe 起来后再对齐一次
+
+    // 多次尝试 resize + 注入样式，因为 GGB 是异步加载的
+    setTimeout(fitSize, 300);
+    setTimeout(forceFill, 500);
+    setTimeout(fitSize, 800);
+    setTimeout(forceFill, 1000);
   }
 
   if (document.readyState === 'loading') {
@@ -114,7 +165,8 @@
 
   var t;
   window.addEventListener('resize', function(){
-    clearTimeout(t); t = setTimeout(fitSize, 200);
+    clearTimeout(t);
+    t = setTimeout(function(){ fitSize(); forceFill(); }, 200);
   });
 })();
 </script>
