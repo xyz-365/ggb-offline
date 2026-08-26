@@ -1,62 +1,61 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GeoGebra 嵌入示例（解决手机留空）</title>
-
-<!-- ① 引入 GeoGebra 官方 JS 库 -->
+<title>GeoGebra 嵌入（自建网站 + 本地 .ggb，解决手机留空）</title>
 <script src="https://www.geogebra.org/apps/deployggb.js"></script>
-
 <style>
-/* ===== 核心：解决手机端底部留空的样式 ===== */
-.ggb-wrap {
-  width: 100%;
-  aspect-ratio: 16 / 9;      /* 锁定宽高比，自适应永不留空 */
-  max-height: 70vh;          /* 防止横屏 / 平板过高 */
-  margin: 0 auto;
-}
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "PingFang SC", sans-serif; margin: 0; padding: 12px; }
 
-/* 让 iframe 和 JS API 注入的容器都填满 .ggb-wrap */
-.ggb-wrap iframe,
-.ggb-wrap > div {
-  width: 100% !important;
-  height: 100% !important;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-}
-
-/* 备选：媒体查询（兼容不支持 aspect-ratio 的老浏览器） */
-@media (max-width: 640px) {
-  .ggb-wrap { max-height: none; }
-}
+  /* 核心：解决手机底部留空 —— 用 aspect-ratio 替掉固定 450px */
+  .ggb-wrap {
+    width: 100%;
+    aspect-ratio: 4 / 3;        /* GeoGebra 画布接近 4:3，比 16:9 更贴合 */
+    max-height: 80vh;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;           /* 裁掉溢出，避免"假留空" */
+    background: #fff;
+    margin: 12px 0;
+  }
+  .ggb-wrap > div,
+  .ggb-wrap iframe {
+    width: 100% !important;
+    height: 100% !important;
+    border: 0;
+    display: block;
+  }
+  @supports not (aspect-ratio: 4 / 3) {   /* 旧浏览器兜底 */
+    .ggb-wrap { height: 75vw; max-height: 500px; }
+  }
 </style>
 </head>
 <body>
 
-<h2>方案一：JS API 嵌入（推荐，最稳）</h2>
-<div class="ggb-wrap" id="ggb-element-1"></div>
+<h2>GeoGebra 嵌入演示</h2>
+<div class="ggb-wrap" id="ggb-app"></div>
 
 <script>
-  var applet1 = new GGBApplet({
-    "filename": "https://www.geogebra.org/material/file/yuan.ggb", // ← 改成你自己的 .ggb 地址
+  var GGB_FILE = 'yuan.ggb';   // ← 改成你自己的 .ggb 路径，须与页面同域
+
+  var params = {
+    "appName": "classic",
     "showToolBar": true,
     "showAlgebraInput": true,
-    "showMenuBar": true
-  }, true);
-  window.addEventListener("load", function () {
-    applet1.inject('ggb-element-1');
-  });
+    "showMenuBar": true,
+    "enableRightClick": false,
+    "useBrowserForJS": true,
+    "borderColor": "#ddd",
+    "appletOnLoad": function () { console.log('GeoGebra 加载完成'); }
+  };
+  if (typeof GGB_FILE !== 'undefined') params.filename = GGB_FILE;
+
+  var applet = new GGBApplet(params, '5.0', 'ggb-app');
+  window.addEventListener('load', function () { applet.inject('ggb-app'); });
 </script>
-
-<hr>
-
-<h2>方案二：官方 iframe 嵌入（适合 CMS 禁用 script 时）</h2>
-<!-- 先把 yuan.ggb 上传到 geogebra.org，分享拿到 material id 填入下方 -->
-<div class="ggb-wrap">
-  <iframe src="https://www.geogebra.org/material/iframe/id/YOUR_MATERIAL_ID"
-          allowfullscreen></iframe>
-</div>
 
 </body>
 </html>
