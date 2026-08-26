@@ -10,11 +10,15 @@
             padding: 0;
             box-sizing: border-box;
         }
+        html, body {
+            height: 100%;
+        }
         body {
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            min-height: 100dvh;
             background-color: #f0f2f5;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
@@ -25,13 +29,21 @@
         }
         #applet_container {
             width: 100%;
-            aspect-ratio: 16 / 9;          /* 使用宽高比 16:9，自适应宽度 */
+            aspect-ratio: 16 / 9;
             background-color: #ffffff;
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
             overflow: hidden;
             position: relative;
         }
+        /* GeoGebra iframe 填满容器 */
+        #applet_container iframe {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+            border: none;
+        }
+
         /* 加载提示 */
         .loading {
             display: flex;
@@ -52,63 +64,65 @@
             75% { content: "..."; }
             100% { content: ""; }
         }
-        /* 移动端适配 */
+
+        /* ===== 移动端适配 ===== */
         @media (max-width: 640px) {
-            .container { padding: 8px; }
-            #applet_container { 
-                width: 100%;
-                height: 70vw;              /* 高度为视口宽度的 70% */
-              max-height: 460px;         /* 限制最大高度，避免过大 */
-              border-radius: 8px; 
-               
+            body {
+                align-items: flex-start;
+                padding-top: env(safe-area-inset-top, 16px);
+                padding-bottom: env(safe-area-inset-bottom, 0px);
+            }
+            .container {
+                padding: 8px;
+            }
+            #applet_container {
+                aspect-ratio: 16 / 9;
+                max-height: none;
+                border-radius: 8px;
             }
         }
+
         @media (max-width: 420px) {
-            #applet_container { 
-                aspect-ratio: 4 / 5;        /* 小屏手机用竖屏比例 3:4 */
-                 max-height: 80vh; 
+            #applet_container {
+                aspect-ratio: 4 / 5;
+                max-height: 70dvh;
             }
         }
+
+        /* 竖屏 */
         @media (orientation: portrait) {
-    #applet_container {
-        width: 100%;
-        height: 420px;              /* 竖屏下固定高度，根据你的内容调整 */
-        max-height: 70vh;           /* 同时限制不超过屏幕高度的 70% */
-    }
-}
+            #applet_container {
+                max-height: 70dvh;
+            }
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <!-- GeoGebra 容器 -->
         <div id="applet_container">
             <div class="loading">加载中</div>
         </div>
     </div>
 
-    <!-- ========== 核心加载脚本 ========== -->
+    <!-- GeoGebra 核心加载脚本 -->
     <script src="GeoGebra/deployggb.js"></script>
 
     <script>
         (function() {
             "use strict";
 
-            // ----- 工具函数：获取 URL 参数 -----
             function getQueryParam(name) {
                 var url = new URL(window.location.href);
                 return url.searchParams.get(name);
             }
 
-            // ----- 配置区（你可以在这里修改默认值）-----
             var DEFAULT_FILE_URL = "https://p.jgd.cc.cd/file/1784779273427_1.ggb";
             var GGB_BASE_PATH = "GeoGebra/HTML5/5.0/web3d/";
 
-            // ----- 从 URL 获取文件名或完整 URL -----
             var fileParam = getQueryParam('file');
             var fileUrl = (fileParam && fileParam.trim() !== '') ? fileParam.trim() : DEFAULT_FILE_URL;
 
-            // 防止路径遍历攻击
             if (!fileUrl.includes('://')) {
                 if (fileUrl.includes('/') || fileUrl.includes('\\')) {
                     fileUrl = DEFAULT_FILE_URL;
@@ -116,18 +130,17 @@
                 }
             }
 
-            // ----- 配置 GeoGebra Applet（使用百分比高度，填满容器）-----
             var params = {
                 "filename": fileUrl,
                 "width": "100%",
-                "height": "100%",                 // 百分比高度，填满容器
+                "height": "100%",
                 "appName": "classic",
                 "showToolBar": false,
                 "showMenuBar": false,
                 "showAlgebraInput": false,
                 "showResetIcon": true,
-                "showFullscreenButton": true,     // 显示全屏按钮
-                "showZoomButtons": true,          // 显示缩放按钮
+                "showFullscreenButton": true,
+                "showZoomButtons": true,
                 "enableLabelDrags": false,
                 "enableShiftDragZoom": true,
                 "enableRightClick": false,
@@ -143,7 +156,6 @@
                 }
             };
 
-            // ----- 创建并注入 Applet -----
             var applet = new GGBApplet(params, true);
             applet.setHTML5Codebase(GGB_BASE_PATH);
 
@@ -165,7 +177,6 @@
                 injectApplet();
             }
 
-            // ----- 窗口自适应 -----
             var resizeTimer = null;
             window.addEventListener('resize', function() {
                 if (resizeTimer) clearTimeout(resizeTimer);
