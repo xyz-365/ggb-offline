@@ -1,60 +1,58 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GeoGebra 嵌入（自建网站 + 本地 .ggb，解决手机留空）</title>
+<title>GeoGebra 嵌入</title>
+
+<!-- GeoGebra 官方 JS 库 -->
 <script src="https://www.geogebra.org/apps/deployggb.js"></script>
+
 <style>
   * { box-sizing: border-box; }
-  body { font-family: -apple-system, "PingFang SC", sans-serif; margin: 0; padding: 12px; }
+  html, body { margin: 0; padding: 0; background: #fff; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
 
-  /* 核心：解决手机底部留空 —— 用 aspect-ratio 替掉固定 450px */
+  /* ===== 核心：解决手机端底部留空 =====
+       不再写死 height，让高度随宽度等比缩放，手机端上下零留空 */
   .ggb-wrap {
     width: 100%;
-    aspect-ratio: 4 / 3;        /* GeoGebra 画布接近 4:3，比 16:9 更贴合 */
-    max-height: 80vh;
+    aspect-ratio: 4 / 3;   /* 宽高比锁定，自适应永不留空 */
+    max-height: 85vh;      /* 防止横屏 / 桌面过高 */
     border: 1px solid #ddd;
-    border-radius: 8px;
-    overflow: hidden;           /* 裁掉溢出，避免"假留空" */
-    background: #fff;
-    margin: 12px 0;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #fafafa;
   }
+  /* GeoGebra 注入的容器填满 .ggb-wrap */
   .ggb-wrap > div,
-  .ggb-wrap iframe {
-    width: 100% !important;
-    height: 100% !important;
-    border: 0;
-    display: block;
-  }
-  @supports not (aspect-ratio: 4 / 3) {   /* 旧浏览器兜底 */
-    .ggb-wrap { height: 75vw; max-height: 500px; }
+  .ggb-wrap iframe { width: 100% !important; height: 100% !important; border: 0; display: block; }
+  /* 旧浏览器兜底（不支持 aspect-ratio 时） */
+  @supports not (aspect-ratio: 4 / 3) {
+    .ggb-wrap { height: 75vw; max-height: 560px; }
   }
 </style>
 </head>
 <body>
 
-<h2>GeoGebra 嵌入演示</h2>
-<div class="ggb-wrap" id="ggb-app"></div>
+<!-- GeoGebra 挂载点 -->
+<div class="ggb-wrap"><div id="ggb-app"></div></div>
 
 <script>
-  var GGB_FILE = 'yuan.ggb';   // ← 改成你自己的 .ggb 路径，须与页面同域
+  // 读取地址栏 ?file= 参数（博客 iframe 传过来的 ggb 地址）
+  var ggbUrl = new URLSearchParams(location.search).get('file');
 
-  var params = {
-    "appName": "classic",
-    "showToolBar": true,
-    "showAlgebraInput": true,
-    "showMenuBar": true,
-    "enableRightClick": false,
-    "useBrowserForJS": true,
-    "borderColor": "#ddd",
-    "appletOnLoad": function () { console.log('GeoGebra 加载完成'); }
-  };
-  if (typeof GGB_FILE !== 'undefined') params.filename = GGB_FILE;
-
-  var applet = new GGBApplet(params, '5.0', 'ggb-app');
-  window.addEventListener('load', function () { applet.inject('ggb-app'); });
+  if (ggbUrl) {
+    var applet = new GGBApplet({
+      "filename": ggbUrl,           // ← ggb 文件地址（在你自己的服务器上）
+      "showToolBar": true,
+      "showAlgebraInput": true,
+      "showMenuBar": true
+    }, '5.0', 'ggb-app');
+    applet.inject('ggb-app');
+  } else {
+    document.getElementById('ggb-app').textContent = '请在地址栏追加 ?file=https://...ggb';
+  }
 </script>
 
 </body>
