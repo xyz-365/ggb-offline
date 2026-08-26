@@ -23,28 +23,6 @@
             max-width: 820px;
             padding: 16px;
         }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        .header h1 {
-            font-size: 18px;
-            font-weight: 600;
-            color: #1a1a2e;
-            word-break: break-all;
-        }
-        .file-badge {
-            font-size: 13px;
-            background: #e8e8e8;
-            padding: 4px 12px;
-            border-radius: 20px;
-            color: #555;
-            white-space: nowrap;
-        }
         #applet_container {
             width: 100%;
             height: 600px;
@@ -79,8 +57,6 @@
         @media (max-width: 640px) {
             .container { padding: 8px; }
             #applet_container { height: 75vw; border-radius: 8px; }
-            .header h1 { font-size: 15px; }
-            .file-badge { font-size: 11px; padding: 2px 10px; }
         }
         @media (max-width: 420px) {
             #applet_container { height: 80vw; }
@@ -90,12 +66,6 @@
 <body>
 
     <div class="container">
-        <!-- 顶部信息栏 -->
-        <div class="header">
-            <h1 id="fileDisplay">📐 GeoGebra</h1>
-            <span class="file-badge" id="fileNameBadge">加载中...</span>
-        </div>
-
         <!-- GeoGebra 容器 -->
         <div id="applet_container">
             <div class="loading">加载中</div>
@@ -117,56 +87,37 @@
             }
 
             // ----- 配置区（你可以在这里修改默认值）-----
-            // 默认加载的文件 URL（可以换成你的默认文件地址）
             var DEFAULT_FILE_URL = "https://p.jgd.cc.cd/file/1784779273427_1.ggb";
-            var GGB_BASE_PATH = "GeoGebra/HTML5/5.0/web3d/";  // 离线包核心资源路径
+            var GGB_BASE_PATH = "GeoGebra/HTML5/5.0/web3d/";
 
             // ----- 从 URL 获取文件名或完整 URL -----
             var fileParam = getQueryParam('file');
-
-            // 如果 URL 参数存在且不为空，使用它；否则使用默认值
             var fileUrl = (fileParam && fileParam.trim() !== '') ? fileParam.trim() : DEFAULT_FILE_URL;
 
-            // 简单防止路径遍历攻击（如果传入的是相对路径，仅允许文件名）
-            // 但如果传入的是完整 URL（包含 ://），则直接放行
+            // 防止路径遍历攻击
             if (!fileUrl.includes('://')) {
-                // 如果是相对路径，防止包含 / 或 \
                 if (fileUrl.includes('/') || fileUrl.includes('\\')) {
                     fileUrl = DEFAULT_FILE_URL;
                     console.warn('不合法的文件名，已使用默认文件');
                 }
             }
 
-            // ----- 更新页面 UI（显示文件名）-----
-            var displayEl = document.getElementById('fileDisplay');
-            var badgeEl = document.getElementById('fileNameBadge');
-            // 从 URL 中提取文件名用于显示
-            var displayName = fileUrl;
-            if (fileUrl.includes('/')) {
-                var parts = fileUrl.split('/');
-                displayName = parts[parts.length - 1];
-            }
-            if (displayEl) {
-                displayEl.textContent = '📐 ' + displayName.replace(/\.ggb$/i, '');
-            }
-            if (badgeEl) {
-                badgeEl.textContent = displayName;
-            }
-
-            // ----- 配置 GeoGebra Applet -----
+            // ----- 配置 GeoGebra Applet（隐藏所有标题和标签）-----
             var params = {
-                "filename": fileUrl,              // 直接使用完整 URL
-                "width": "100%",                  // 自适应宽度
+                "filename": fileUrl,
+                "width": "100%",
                 "height": 600,
-                "appName": "classic",             // classic | graphing | geometry | 3d
-                "showToolBar": true,
-                "showMenuBar": false,
-                "showAlgebraInput": true,
-                "showResetIcon": true,
+                "appName": "classic",
+                "showToolBar": false,          // 隐藏工具栏
+                "showMenuBar": false,          // 隐藏菜单栏
+                "showAlgebraInput": false,     // 隐藏输入框
+                "showResetIcon": true,         // 保留重置按钮（可选）
                 "enableLabelDrags": false,
                 "enableShiftDragZoom": true,
                 "enableRightClick": false,
                 "showLogging": false,
+                // 关键：隐藏左上角的文件名标题
+                "showTitleBar": false,
                 "errorHandler": function(msg) {
                     console.error('GeoGebra 加载错误:', msg);
                     var container = document.getElementById('applet_container');
@@ -178,15 +129,11 @@
 
             // ----- 创建并注入 Applet -----
             var applet = new GGBApplet(params, true);
-
-            // 设置离线代码库路径
             applet.setHTML5Codebase(GGB_BASE_PATH);
 
-            // 等待 DOM 加载完成后注入
             function injectApplet() {
                 var container = document.getElementById('applet_container');
                 if (!container) return;
-                // 清空容器（移除加载提示）
                 container.innerHTML = '';
                 try {
                     applet.inject('applet_container');
@@ -202,7 +149,7 @@
                 injectApplet();
             }
 
-            // ----- 窗口变化时通知 Applet 自适应（可选）-----
+            // ----- 窗口自适应 -----
             var resizeTimer = null;
             window.addEventListener('resize', function() {
                 if (resizeTimer) clearTimeout(resizeTimer);
